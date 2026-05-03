@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
+import shap
 
 import joblib
 import numpy as np
@@ -178,8 +179,6 @@ def compute_shap_explanation(model, input_df: pd.DataFrame):
         )
 
     try:
-        import shap
-
         if model_name in {"XGBClassifier", "RandomForestClassifier"}:
             explainer = shap.TreeExplainer(model)
             values = explainer.shap_values(input_df)
@@ -325,7 +324,7 @@ def build_pdf_bytes(report: dict) -> bytes:
     resources = DictionaryObject({NameObject("/Font"): DictionaryObject({NameObject("/F1"): font_ref})})
     page[NameObject("/Resources")] = resources
 
-    # Put all of our raw PDF drawing commands into the page content stream.
+    # Put all of the raw PDF drawing commands into the page content stream.
     contents = DecodedStreamObject()
     contents.set_data(content_stream)
     contents[NameObject("/Length")] = NumberObject(len(content_stream))
