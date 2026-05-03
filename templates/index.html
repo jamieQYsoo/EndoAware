@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Endometriosis Survey</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <main class="container">
+    <section class="card">
+      <h1>Endometriosis Probability Survey</h1>
+      <p class="subtext">Complete this symptom survey to estimate the likelihood of endometriosis.</p>
+
+      <form method="post" class="survey-form">
+        <fieldset class="question model-select">
+          <legend>Choose Model</legend>
+          <select name="selected_model" required>
+            {% for model_file in available_models %}
+            <option value="{{ model_file }}" {% if selected_model == model_file %}selected{% endif %}>
+              {{ model_display_name(model_file) }}
+            </option>
+            {% endfor %}
+          </select>
+        </fieldset>
+
+        {% for group_name, questions in grouped_questions %}
+        <section class="group-section">
+          <h2>{{ group_name }}</h2>
+          {% for feature, label in questions %}
+          <fieldset class="question">
+            <legend>{{ loop.index }}. {{ label }}</legend>
+            <label>
+              <input type="radio" name="{{ feature }}" value="1" {% if responses[feature] == 1 %}checked{% endif %} required>
+              Yes
+            </label>
+            <label>
+              <input type="radio" name="{{ feature }}" value="0" {% if responses[feature] == 0 %}checked{% endif %} required>
+              No
+            </label>
+          </fieldset>
+          {% endfor %}
+        </section>
+        {% endfor %}
+
+        <button type="submit">Calculate Probability</button>
+      </form>
+
+      {% if probability is not none %}
+      <section id="results" class="result success">
+        <h2>Estimated Probability</h2>
+        <p>{{ "%.2f"|format(probability) }}%</p>
+        <a class="download-link" href="{{ url_for('download_report') }}">Download PDF report</a>
+      </section>
+      {% endif %}
+
+      {% if shap_top_features %}
+      <section class="result shap">
+        <h2>Top SHAP Drivers</h2>
+        <p class="small-note">Higher absolute SHAP value means stronger contribution to this prediction.</p>
+
+        <div class="shap-chart">
+          {% for item in shap_chart_data %}
+          <div class="shap-row">
+            <div class="shap-headline">
+              <div class="shap-feature">{{ item.feature.replace('_', ' ').capitalize() }}</div>
+              <div class="shap-value">{{ "%.5f"|format(item.value) }}</div>
+            </div>
+            <div class="shap-bar-track">
+              <div class="shap-bar {{ item.direction }}" data-width="{{ '%.2f'|format(item.width_pct) }}"></div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+      {% elif shap_message %}
+      <section class="result shap-note">
+        <h2>SHAP unavailable</h2>
+        <p>{{ shap_message }}</p>
+      </section>
+      {% endif %}
+
+      {% if error %}
+      <section class="result error">
+        <h2>Error</h2>
+        <p>{{ error }}</p>
+      </section>
+      {% endif %}
+
+      <p class="disclaimer">
+        This tool provides an estimate only and is not a medical diagnosis. Please consult a qualified clinician for professional advice.
+      </p>
+    </section>
+  </main>
+  <script>
+    document.querySelectorAll('.shap-bar[data-width]').forEach((bar) => {
+      const width = Number(bar.getAttribute('data-width') || 0);
+      bar.style.width = `${Math.max(0, Math.min(100, width))}%`;
+    });
+
+    if (document.getElementById('results')) {
+      document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  </script>
+</body>
+</html>
